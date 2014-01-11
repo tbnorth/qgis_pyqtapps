@@ -33,19 +33,54 @@ class Panel(QtGui.QWidget, IfaceUser):
         self.layer = self.layers()['complexes']
         self.features = self.layer.getFeatures()
         
+        self.nextThing()
+        
     def build_ui(self):
         self.setLayout(QtGui.QVBoxLayout())
+        
+        # self.layout().setContentsMargins(0,0,0,0)
+        # self.layout().setSpacing(0)
+        # self.sa = QtGui.QScrollArea()
+        # self.layout().addWidget(self.sa)
+        # sa.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        
+        # self.innerUI = QtGui.QWidget()
+        # self.innerUI.setLayout(QtGui.QVBoxLayout())
+        
+        row = QtGui.QWidget()
+        row.setLayout(QtGui.QHBoxLayout())
+        self.layout().addWidget(row)
+        
+        but = QtGui.QPushButton('Prev', self)
+        row.layout().addWidget(but)
+        but.clicked.connect(lambda checked:self.nextThing(previous=True))
+        
         but = QtGui.QPushButton('Next', self)
-        self.layout().addWidget(but)
+        row.layout().addWidget(but)
         but.clicked.connect(lambda checked:self.nextThing())
+        
+        self.jump = jump = QtGui.QLineEdit()
+        row.layout().addWidget(jump)
+        jump.returnPressed.connect(lambda j=jump: self.nextThing(jump=j.text()))
+        
+        # self.sa.setWidget(self.innerUI)
+        
         self.options = QtGui.QWidget()
         self.options.setLayout(QtGui.QVBoxLayout())
+        # self.options.setMaximumHeight(5000)
         self.layout().addWidget(self.options)
+        # self.options.show()  # required
+        # self.sa.setWidget(self.options) # must come after self.options.setLayout()
+        # self.options.show()  # required
+        # sa.setWidget(self.options)
+        # sa.show()
+
+        # self.layout().addStretch()
     def dock_name(self):
         """dock_name - Return name for this app
         """
 
-        return "Complex matcher"
+        return "Locale matcher"
     def setup_env(self):
 
         self.load_layers([
@@ -118,12 +153,17 @@ class Panel(QtGui.QWidget, IfaceUser):
          where sh2s.seg_hash = mcp.seg_hash and
                sh2s.site = albsite.site
         ;
-        select * from sh2s order by seg_hash, sep;
+        select sh2s.* 
+          from sh2s 
+               left join glrig2_misc.locale_mapped using (seg_hash)
+         where status is null
+        order by seg_hash, sep;
         """)
         
         self.sh2s = {}
         for sh, site, sep in cur.fetchall():
             self.sh2s.setdefault(sh, []).append((site, sep))
+        self.sh_n = 0  # which one are we looking at
             
         cur.execute("select trim(code), name from glei_1_orig.a_subproject_desc")
         self.sp2name = dict(cur.fetchall())
@@ -145,6 +185,16 @@ class Panel(QtGui.QWidget, IfaceUser):
          order by seg_num, poly_num
         ;
         
+        create table glrig2_misc.locale_mapped (
+            seg_hash int primary key, 
+            status text
+        );
+        
+        insert into glrig2_misc.locale_mapped
+        select 1000*seg_num+poly_num, 'high-energy'
+          from glei_1_orig.a_locale
+         where geomorph = 'He' and status = 'S';
+
 
         """
            
@@ -152,11 +202,20 @@ class Panel(QtGui.QWidget, IfaceUser):
         mb = self.iface.messageBar()
         mb.pushWidget(mb.createMessage("GONE"))
         self.deleteLater()   
-    def nextThing(self):
+    def nextThing(self, previous=False, jump=None):
         iface = self.iface
         canvas = iface.mapCanvas()
         
         w = self.options
+        w.hide()
+        
+        statii = w.findChildren(QtGui.QPushButton, 'status')
+        for status in statii:
+            if status.text() == "don't mark":
+                continue
+            if status.isChecked():
+                print status.sh, status.text()
+        
         if 0:
             lyr = self.layers()['complex_to_site']
             
@@ -190,16 +249,31 @@ class Panel(QtGui.QWidget, IfaceUser):
                 cull.widget().deleteLater()
             cull = w.layout().takeAt(0)  
             
+        w = QtGui.QWidget()
+        w.setLayout(QtGui.QVBoxLayout())
+            
         notes = QtGui.QTextEdit()
         w.layout().addWidget(notes)
         
-        sh = sorted(self.sh2s)[0]
+        if previous:
+            self.sh_n -= 2
+            
+        if jump:
+            jump = int(jump)
+            for n, i in enumerate(sorted(self.sh2s)):
+                if i == jump:
+                    self.sh_n = n
+                    break
+            else:
+                raise Exception("Did not find %d"%jump)
+        
+        sh = sorted(self.sh2s)[self.sh_n]
         points = self.layers()['points']
         points.removeSelection()
         points.select(self.pnt_ids[sh])
         self.iface.setActiveLayer(points)
         canvas.zoomToSelected(points)
-        canvas.zoomByFactor(1.5)
+        canvas.zoomByFactor(4)
 
         sites = self.layers()['sites']
         sites.removeSelection()
@@ -232,16 +306,21 @@ class Panel(QtGui.QWidget, IfaceUser):
             sites.removeSelection()
             sites.select(self.site_ids[site])
             self.iface.mapCanvas().panToSelected(sites)
-
+            
+        w.layout().addWidget(QtGui.QLabel("Site, distance, strength of match"))
         for site, sep in near_sites:
             lvls = QtGui.QWidget()
             lvls.setLayout(QtGui.QHBoxLayout())
             w.layout().addWidget(lvls)
             lo = lvls.layout()
             but = QtGui.QPushButton(str(site))
-            
             but.clicked.connect(lambda checked, site=site: show_site(site))
             lo.addWidget(but)
+            lab = QtGui.QLabel(str(int(sep))+'m')
+            # lab.setMinimumHeight(12)
+            # lab.setMinimumWidth(55)
+            # lab.setMaximumWidth(55)
+            lo.addWidget(lab)
             bg = QtGui.QButtonGroup()
             lo.bg = bg
             for s in 'strong', 'ok', 'weak', 'none':
@@ -257,12 +336,36 @@ class Panel(QtGui.QWidget, IfaceUser):
                 lo.addWidget(but)
             lo.addStretch()
             
-        but = QtGui.QPushButton("Mark data as assigned")
-        but.setCheckable(True)
-        but.setObjectName("assigned")
-        but.setStyleSheet("QPushButton::checked { background: green }")
+        w.layout().addWidget(QtGui.QLabel("Mark data (points) as:"))
+        lvls = QtGui.QWidget()
+        lvls.setLayout(QtGui.QHBoxLayout())
+        w.layout().addWidget(lvls)
+        lo = lvls.layout()
+        w.bg = QtGui.QButtonGroup()
+        for s in 'assigned (done)', 'needs review', "don't mark":
+            but = QtGui.QPushButton(s)
+            but.setCheckable(True)
+            but.setStyleSheet("QPushButton::checked { background: green }")
+            but.sh = sh
+            but.setObjectName('status')
+            if s == 'none':
+                but.setChecked(True)
+            w.bg.addButton(but)
+            lo.addWidget(but)
+        lo.addStretch()
+
+        # w.layout().addStretch()
+        self.jump.setText('')  # avoid confusion
         
-        w.layout().addStretch()
+        sa = QtGui.QScrollArea()
+        self.options.layout().addWidget(sa)
+        sa.setWidget(w)
+        
+        w.show()
+        self.options.show()
+        # self.sa.setWidget(self.options) # must come after self.options.setLayout()
+        # w.show() 
+        self.sh_n += 1
 
         return
     def highlight_site(self, site):
