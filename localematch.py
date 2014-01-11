@@ -38,15 +38,10 @@ class Panel(QtGui.QWidget, IfaceUser):
     def build_ui(self):
         self.setLayout(QtGui.QVBoxLayout())
         
-        # self.layout().setContentsMargins(0,0,0,0)
-        # self.layout().setSpacing(0)
-        # self.sa = QtGui.QScrollArea()
-        # self.layout().addWidget(self.sa)
-        # sa.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-        
-        # self.innerUI = QtGui.QWidget()
-        # self.innerUI.setLayout(QtGui.QVBoxLayout())
-        
+        self.options = QtGui.QWidget()
+        self.options.setLayout(QtGui.QVBoxLayout())
+        self.layout().addWidget(self.options)
+
         row = QtGui.QWidget()
         row.setLayout(QtGui.QHBoxLayout())
         self.layout().addWidget(row)
@@ -63,19 +58,6 @@ class Panel(QtGui.QWidget, IfaceUser):
         row.layout().addWidget(jump)
         jump.returnPressed.connect(lambda j=jump: self.nextThing(jump=j.text()))
         
-        # self.sa.setWidget(self.innerUI)
-        
-        self.options = QtGui.QWidget()
-        self.options.setLayout(QtGui.QVBoxLayout())
-        # self.options.setMaximumHeight(5000)
-        self.layout().addWidget(self.options)
-        # self.options.show()  # required
-        # self.sa.setWidget(self.options) # must come after self.options.setLayout()
-        # self.options.show()  # required
-        # sa.setWidget(self.options)
-        # sa.show()
-
-        # self.layout().addStretch()
     def dock_name(self):
         """dock_name - Return name for this app
         """
@@ -207,9 +189,9 @@ class Panel(QtGui.QWidget, IfaceUser):
         canvas = iface.mapCanvas()
         
         w = self.options
-        w.hide()
+        self.options.hide()  # shows that something's happening
         
-        statii = w.findChildren(QtGui.QPushButton, 'status')
+        statii = self.options.findChildren(QtGui.QPushButton, 'status')
         for status in statii:
             if status.text() == "don't mark":
                 continue
@@ -225,7 +207,7 @@ class Panel(QtGui.QWidget, IfaceUser):
             fr.setFlags(QgsFeatureRequest.NoGeometry)
             
             to_set = {}
-            for check in w.findChildren(QtGui.QCheckBox):
+            for check in self.options.findChildren(QtGui.QCheckBox):
                 to_set[(check.complex, check.site)] = check.isChecked()
                 QgsMessageLog.logMessage(str((check.complex, check.site)))
             if to_set:
@@ -243,11 +225,11 @@ class Panel(QtGui.QWidget, IfaceUser):
             # lyr.commitChanges()
             # lyr.reload()
             
-        cull = w.layout().takeAt(0)
+        cull = self.options.layout().takeAt(0)
         while cull:
             if cull.widget():
                 cull.widget().deleteLater()
-            cull = w.layout().takeAt(0)  
+            cull = self.options.layout().takeAt(0)  
             
         w = QtGui.QWidget()
         w.setLayout(QtGui.QVBoxLayout())
@@ -354,17 +336,14 @@ class Panel(QtGui.QWidget, IfaceUser):
             lo.addWidget(but)
         lo.addStretch()
 
-        # w.layout().addStretch()
         self.jump.setText('')  # avoid confusion
         
         sa = QtGui.QScrollArea()
         self.options.layout().addWidget(sa)
         sa.setWidget(w)
-        
         w.show()
         self.options.show()
-        # self.sa.setWidget(self.options) # must come after self.options.setLayout()
-        # w.show() 
+
         self.sh_n += 1
 
         return
