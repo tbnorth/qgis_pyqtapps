@@ -88,3 +88,14 @@ class IfaceUser:
         main = iface.mainWindow()
         
         main.addDockWidget(Qt.RightDockWidgetArea, dock)
+    def map_attr_to_id(self, layer_name, attr_name=None, key=None):
+        ans = {}
+        fr = QgsFeatureRequest()
+        fr.setFlags(QgsFeatureRequest.NoGeometry)
+        for i in self.layers()[layer_name].getFeatures(fr):
+            if key:
+                keyval = key(i)
+            else:
+                keyval = i[attr_name]
+            ans.setdefault(keyval, []).append(i.id())
+        return ans
