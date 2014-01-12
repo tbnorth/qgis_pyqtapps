@@ -176,6 +176,12 @@ class Panel(QtGui.QWidget, IfaceUser):
         select 1000*seg_num+poly_num, 'high-energy'
           from glei_1_orig.a_locale
          where geomorph = 'He' and status = 'S';
+         
+        create table glrig2_misc.locale_to_site (
+            seg_hash int,
+            site int,
+            status text
+        );
 
 
         """
@@ -188,6 +194,9 @@ class Panel(QtGui.QWidget, IfaceUser):
         iface = self.iface
         canvas = iface.mapCanvas()
         
+        con = psycopg2.connect(self.uri.connectionInfo())
+        cur = con.cursor()
+        
         w = self.options
         self.options.hide()  # shows that something's happening
         
@@ -197,6 +206,36 @@ class Panel(QtGui.QWidget, IfaceUser):
                 continue
             if status.isChecked():
                 print status.sh, status.text()
+                cur.execute("""
+                    update glrig2_misc.locale_mapped
+                       set status = %s
+                     where seg_hash = %s;
+                    """, [status.text(), status.sh])
+                cur.execute("""
+                    insert into glrig2_misc.locale_mapped
+                    select %s, %s
+                     where not exists (select 1 from glrig2_misc.locale_mapped x
+                                        where x.seg_hash = %s)
+                    """, [status.sh, status.text(), status.sh])
+                
+        statii = self.options.findChildren(QtGui.QPushButton, 'strength')
+        for status in statii:
+            if status.isChecked():
+                print status.sh, status.site, status.text()
+                cur.execute("""
+                    update glrig2_misc.locale_to_site
+                       set status = %s
+                     where seg_hash = %s and site = %s;
+                    """, [status.text(), status.sh, status.site])
+                cur.execute("""
+                    insert into glrig2_misc.locale_to_site
+                    select %s, %s, %s
+                     where not exists (select 1 from glrig2_misc.locale_to_site x
+                                        where x.seg_hash = %s and x.site = %s)
+                    """, [status.sh, status.site, status.text(), 
+                          status.sh, status.site])
+                
+        con.commit()
         
         if 0:
             lyr = self.layers()['complex_to_site']
@@ -290,6 +329,11 @@ class Panel(QtGui.QWidget, IfaceUser):
             self.iface.mapCanvas().panToSelected(sites)
             
         w.layout().addWidget(QtGui.QLabel("Site, distance, strength of match"))
+        cur.execute("""select site, status 
+                         from glrig2_misc.locale_to_site
+                        where seg_hash = %s""", [sh])
+        site_status = dict(cur.fetchall())
+
         for site, sep in near_sites:
             lvls = QtGui.QWidget()
             lvls.setLayout(QtGui.QHBoxLayout())
@@ -300,19 +344,20 @@ class Panel(QtGui.QWidget, IfaceUser):
             lo.addWidget(but)
             lab = QtGui.QLabel(str(int(sep))+'m')
             # lab.setMinimumHeight(12)
-            # lab.setMinimumWidth(55)
-            # lab.setMaximumWidth(55)
+            lab.setMinimumWidth(55)
+            lab.setMaximumWidth(55)
             lo.addWidget(lab)
             bg = QtGui.QButtonGroup()
             lo.bg = bg
+            picked = site_status.get(site, 'none')
             for s in 'strong', 'ok', 'weak', 'none':
                 but = QtGui.QPushButton(s)
                 but.setCheckable(True)
                 but.setStyleSheet("QPushButton::checked { background: green }")
+                but.setObjectName("strength")
                 but.sh = sh
                 but.site = site
-                but.level = s
-                if s == 'none':
+                if s == picked:
                     but.setChecked(True)
                 bg.addButton(but)
                 lo.addWidget(but)
@@ -324,13 +369,22 @@ class Panel(QtGui.QWidget, IfaceUser):
         w.layout().addWidget(lvls)
         lo = lvls.layout()
         w.bg = QtGui.QButtonGroup()
+        
+        picked = "don't mark"
+        cur.execute("""select status 
+                         from glrig2_misc.locale_mapped
+                        where seg_hash = %s""", [sh])
+        res = cur.fetchall()
+        if res:
+            picked = res[0][0]
+        
         for s in 'assigned (done)', 'needs review', "don't mark":
             but = QtGui.QPushButton(s)
             but.setCheckable(True)
             but.setStyleSheet("QPushButton::checked { background: green }")
             but.sh = sh
             but.setObjectName('status')
-            if s == 'none':
+            if s == picked:
                 but.setChecked(True)
             w.bg.addButton(but)
             lo.addWidget(but)
