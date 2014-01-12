@@ -37,9 +37,11 @@ class Panel(QtGui.QWidget, IfaceUser):
         
     def build_ui(self):
         self.setLayout(QtGui.QVBoxLayout())
+        self.layout().setSpacing(2)
         
         self.options = QtGui.QWidget()
         self.options.setLayout(QtGui.QVBoxLayout())
+        self.options.layout().setSpacing(2)
         self.layout().addWidget(self.options)
 
         row = QtGui.QWidget()
@@ -272,6 +274,7 @@ class Panel(QtGui.QWidget, IfaceUser):
             
         w = QtGui.QWidget()
         w.setLayout(QtGui.QVBoxLayout())
+        w.layout().setSpacing(2)
             
         notes = QtGui.QTextEdit()
         w.layout().addWidget(notes)
@@ -339,6 +342,7 @@ class Panel(QtGui.QWidget, IfaceUser):
             lvls.setLayout(QtGui.QHBoxLayout())
             w.layout().addWidget(lvls)
             lo = lvls.layout()
+            lo.setSpacing(2)
             but = QtGui.QPushButton(str(site))
             but.clicked.connect(lambda checked, site=site: show_site(site))
             lo.addWidget(but)
@@ -353,7 +357,7 @@ class Panel(QtGui.QWidget, IfaceUser):
             for s in 'strong', 'ok', 'weak', 'none':
                 but = QtGui.QPushButton(s)
                 but.setCheckable(True)
-                but.setStyleSheet("QPushButton::checked { background: green }")
+                but.setStyleSheet("QPushButton::checked { background: cyan }")
                 but.setObjectName("strength")
                 but.sh = sh
                 but.site = site
@@ -381,7 +385,7 @@ class Panel(QtGui.QWidget, IfaceUser):
         for s in 'assigned (done)', 'needs review', "don't mark":
             but = QtGui.QPushButton(s)
             but.setCheckable(True)
-            but.setStyleSheet("QPushButton::checked { background: green }")
+            but.setStyleSheet("QPushButton::checked { background: cyan }")
             but.sh = sh
             but.setObjectName('status')
             if s == picked:
