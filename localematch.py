@@ -294,6 +294,9 @@ class Panel(QtGui.QWidget, IfaceUser):
         sh = sorted(self.sh2s)[self.sh_n]
         points = self.layers()['points']
         points.removeSelection()
+        
+        points.setSubsetString("seg_hash = %d"%sh)
+        
         points.select(self.pnt_ids[sh])
         self.iface.setActiveLayer(points)
         canvas.zoomToSelected(points)
