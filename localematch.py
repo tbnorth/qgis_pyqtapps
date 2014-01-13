@@ -357,6 +357,7 @@ class Panel(QtGui.QWidget, IfaceUser):
             w.layout().addWidget(lvls)
             lo = lvls.layout()
             lo.setSpacing(2)
+            lo.setContentsMargins(1,1,1,1)
             but = QtGui.QPushButton(str(site))
             but.clicked.connect(lambda checked, site=site: show_site(site))
             lo.addWidget(but)
