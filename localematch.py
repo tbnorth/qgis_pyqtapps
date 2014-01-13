@@ -56,9 +56,11 @@ class Panel(QtGui.QWidget, IfaceUser):
         row.layout().addWidget(but)
         but.clicked.connect(lambda checked:self.nextThing())
         
-        self.jump = jump = QtGui.QLineEdit()
+        self.jump = jump = QtGui.QComboBox()
         row.layout().addWidget(jump)
-        jump.returnPressed.connect(lambda j=jump: self.nextThing(jump=j.text()))
+        for i in sorted(self.sh2s.keys()):
+            jump.addItem(str(int(i)))
+        jump.activated.connect(lambda idx, j=jump: self.nextThing(jump=j.currentText()))
         
     def dock_name(self):
         """dock_name - Return name for this app
@@ -406,7 +408,8 @@ class Panel(QtGui.QWidget, IfaceUser):
             lo.addWidget(but)
         lo.addStretch()
 
-        self.jump.setText('')  # avoid confusion
+        self.jump.setCurrentIndex(
+		    self.jump.findText(str(int(sh))))  # avoid confusion
         
         sa = QtGui.QScrollArea()
         self.options.layout().addWidget(sa)
