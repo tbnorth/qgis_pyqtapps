@@ -94,9 +94,13 @@ class Panel(QtGui.QWidget, IfaceUser):
                 'CRS': 5070,
             },
         ])
+		
+        for i in 'points', 'sites', 'a_locale':
+            self.layers()[i].setSubsetString('')
         
         self.pnt_ids = self.map_attr_to_id('points', 'seg_hash')
         QgsMessageLog.logMessage("%d locale point sets loaded"%len(self.pnt_ids))
+        # QgsMessageLog.logMessage(str(self.pnt_ids.keys()))    
 
         self.site_ids = self.map_attr_to_id('sites', 'site')
         QgsMessageLog.logMessage("%d sites loaded"%len(self.site_ids))    
@@ -104,7 +108,7 @@ class Panel(QtGui.QWidget, IfaceUser):
         self.locale_ids = self.map_attr_to_id('a_locale', 
             key=lambda f: (int(f['seg_num']), int(f['poly_num'])))
         QgsMessageLog.logMessage("%d locales loaded"%len(self.locale_ids))    
-        QgsMessageLog.logMessage(str(self.locale_ids.keys()))    
+        # QgsMessageLog.logMessage(str(self.locale_ids.keys()))    
 
         con = psycopg2.connect(self.uri.connectionInfo())
         cur = con.cursor()
@@ -118,7 +122,8 @@ class Panel(QtGui.QWidget, IfaceUser):
         ;
         create temp table mcp as
         select seg_hash, 
-               ST_ConvexHull(ST_Collect(wkb_geometry)) as geom, 
+               -- ST_ConvexHull(ST_Collect(wkb_geometry)) as geom, 
+               ST_Collect(wkb_geometry) as geom, 
                ST_buffer(ST_ConvexHull(ST_Collect(wkb_geometry)),3000) as buffed
           from glei_1_shape.a_point
          where seg_hash is not null and seg_hash > 0
@@ -148,7 +153,8 @@ class Panel(QtGui.QWidget, IfaceUser):
         for sh, site, sep in cur.fetchall():
             self.sh2s.setdefault(sh, []).append((site, sep))
         self.sh_n = 0  # which one are we looking at
-            
+        # QgsMessageLog.logMessage(str(self.sh2s.keys()))   
+		
         cur.execute("select trim(code), name from glei_1_orig.a_subproject_desc")
         self.sp2name = dict(cur.fetchall())
         cur.execute("select trim(code), name from glei_1_orig.a_geomorph_desc")
@@ -299,8 +305,11 @@ class Panel(QtGui.QWidget, IfaceUser):
         
         points.select(self.pnt_ids[sh])
         self.iface.setActiveLayer(points)
-        canvas.zoomToSelected(points)
-        canvas.zoomByFactor(4)
+        if len(self.pnt_ids[sh]) > 1:
+            canvas.zoomToSelected(points)
+            canvas.zoomByFactor(3)
+        else:
+            canvas.panToSelected(points)
 
         sites = self.layers()['sites']
         sites.removeSelection()

@@ -60,8 +60,8 @@ class IfaceUser:
                     
         iface = self.iface
         self.uri = uri = QgsDataSourceURI()
-        uri.setConnection("beaver.nrri.umn.edu", "5432", "nrgisl01", "tbrown", "frogspit")
         uri.setConnection("127.0.0.1", "15432", "nrgisl01", "tbrown", "frogspit")
+        uri.setConnection("beaver.nrri.umn.edu", "5432", "nrgisl01", "tbrown", "frogspit")
      
         for defn in layers:
             if defn['name'] not in self.layers():
