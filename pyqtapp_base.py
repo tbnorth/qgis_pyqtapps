@@ -18,18 +18,18 @@ class Dock(QtGui.QDockWidget):
         self.visibilityChanged.connect(self.check_closed)
         self.destroyed.connect(self.check_closed)
     def check_closed(self, visible=False):
-        mb = QtGui.QMessageBox()
-        mb.setText("thinking")
-        mb.exec_()
+        # mb = QtGui.QMessageBox()
+        # mb.setText("thinking")
+        # mb.exec_()
         if not visible:
-            mb.setText("thunk")
-            mb.exec_()
+            # mb.setText("thunk")
+            # mb.exec_()
             self.getWidget().close()
             self.deleteLater() 
     def close(self):
-        mb = QtGui.QMessageBox()
-        mb.setText("thinking about closing")
-        lmb.exec_()
+        # mb = QtGui.QMessageBox()
+        # mb.setText("thinking about closing")
+        # lmb.exec_()
         if not visible:
             self.getWidget().close()
             self.deleteLater() 
